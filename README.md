@@ -5,6 +5,6 @@ Name: Praseedha Maddipatla
 
 EID: psm2357
 
-To compile:
+To compile:./build.sh
 
-To run:
+To run:./hw2
