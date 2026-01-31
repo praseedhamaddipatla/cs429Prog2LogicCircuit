@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -17,6 +18,7 @@ Array newArray() {
     arr.data = NULL;
     arr.size = 0;
     arr.capacity = 0;
+    return arr;
 }
 
 void addToArray(Array* arr, int value) {
@@ -54,14 +56,15 @@ void sortArray(Array *arr){
     }
 }
 
-//define types so do not have to deal with strings
+//define types
 typedef enum DeviceType{
     INPUT,
     OUTPUT,
     AND,
     OR,
     NOT,
-    XOR
+    XOR,
+    INVALID
 } DeviceType;
 
 //struct to store characteristics of each device
@@ -81,7 +84,7 @@ typedef struct Device{
 
 Device newDevice(){
     Device dev;
-    dev.type=INPUT;
+    dev.type=INVALID;
     dev.inputs=newArray();
     dev.outputs=newArray();
     dev.numIn=0;
@@ -163,7 +166,7 @@ static DeviceType parseType(const char *line) { //error when not const bc strstr
     }
 
     fprintf(stderr, "Invalid device type: %s\n", line);
-    return NULL; //do null check in method where this is called
+    return INVALID; //check in method where this is called
     
 }
 
@@ -224,6 +227,9 @@ Device parseStanza(FILE *f){
         trim(line); //remove all whitespace
 
         //get each characteristic & update the device
+        if (strcmp(line, "{") == 0) {
+            continue;
+        }
         if (strcmp(line, "}") == 0) {
             break;
         }
@@ -281,6 +287,14 @@ int dfsEval(Circuit c, int id){
     int result;
     switch (d->type){
 
+        case INPUT:
+            result = d->state;
+            break;
+
+        case OUTPUT:
+            result = dfsEval(c, d->inputs.data[0]);
+            break;
+
         case AND:
             result=1;
             for (int i = 0; i < d->numIn; i++) {
@@ -292,7 +306,7 @@ int dfsEval(Circuit c, int id){
             result = 0;
                 for (int i = 0; i < d->numIn; i++) {
                     result = result | dfsEval(c, d->inputs.data[i]);
-                    if(result=1){
+                    if(result==1){
                         break;
                     }
                 }
@@ -310,7 +324,7 @@ int dfsEval(Circuit c, int id){
             break;
         
         default:
-            fprintf(stderr, "Undefined device type. Parsing error.");
+            fprintf(stderr, "Undefined device type. Parsing error.\n");
             result =0;
     }
     d->state=result;
@@ -331,7 +345,7 @@ void generateRows(Circuit *c, int idx){
         }
 
         for(int i=0; i<c->inIDs.size; i++){
-            printf("%d", c->devices[c->inIDs.data[i]].state);
+            printf("%d ", c->devices[c->inIDs.data[i]].state);
         }
 
         printf("| ");
@@ -373,10 +387,6 @@ void printTable(Circuit c){
     generateRows(&c, 0);
 }
 
-int main(int argc, char *argv[]){
-    testmain(argc, argv);
-}
-
 int testmain(int argc, char *argv[]){
     if(argc==2){
         Circuit circ = parseFile(argv[1]);
@@ -386,4 +396,8 @@ int testmain(int argc, char *argv[]){
     }
     fprintf(stderr, "Invalid number of inputs.");
     return 1;
+}
+
+int main(int argc, char *argv[]){
+    testmain(argc, argv);
 }
