@@ -8,3 +8,5 @@ EID: psm2357
 To compile:./build.sh
 
 To run:./hw2
+
+**arguments should be separated by just spaces, for example ./hw1 "file.txt"

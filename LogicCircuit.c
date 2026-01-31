@@ -118,7 +118,7 @@ void addDevice(Circuit *c, Device *d){
         exit(1);
     }
 
-    // If we need to grow the array, initialize new slots
+    // if we need to grow the array, initialize new slots
     if (d->id >= c->numDevices) {
         int oldSize = c->numDevices;
         int newSize = d->id + 1;
@@ -129,7 +129,7 @@ void addDevice(Circuit *c, Device *d){
             exit(1);
         }
         
-        // Initialize all new devices in the gap
+        // initialize all new devices in the gap
         for (int i = oldSize; i < newSize; i++) {
             c->devices[i] = newDevice();
         }
@@ -411,7 +411,7 @@ void printTable(Circuit c){
     generateRows(&c, 0);
 }
 
-int main(int argc, char *argv[]){
+int testmain(int argc, char *argv[]){
     if(argc != 2){
         fprintf(stderr, "Error: Invalid number of arguments\n");
         return 1;
@@ -421,4 +421,8 @@ int main(int argc, char *argv[]){
     printTable(circ);
     freeCircuit(&circ);
     return 0;
+}
+
+int main(int argc, char *argv[]){
+    testmain(argc, argv);
 }
