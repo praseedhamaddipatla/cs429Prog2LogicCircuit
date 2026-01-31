@@ -33,8 +33,8 @@ void addToArray(Array* arr, int value) {
         }
         int *newData = realloc(arr->data, newCap * sizeof(int));
         if (newData == NULL) {
-            printf("Memory allocation failed\n");
-            return;
+            fprintf(stderr, "Error: Memory allocation failed\n");
+            exit(1);
         }
 
         arr->data = newData;
@@ -113,7 +113,17 @@ Circuit newCircuit(){
 }
 
 void addDevice(Circuit *c, Device *d){
+    if (d->type == INVALID) {
+        fprintf(stderr, "Error: Invalid device type\n");
+        exit(1);
+    }
+
     c->devices = realloc(c->devices, (d->id + 1) * sizeof(Device));
+    if (c->devices == NULL) {
+        fprintf(stderr, "Error: Memory allocation failed\n");
+        exit(1);
+    }
+
     c->devices[d->id] = *d;
 
     if (d->id >= c->numDevices) {
@@ -145,7 +155,7 @@ void freeCircuit(Circuit *c) {
 }
 
 //extract device type from text
-static DeviceType parseType(const char *line) { //error when not const bc strstr
+static DeviceType parseType(const char *line) {
     if (strcmp(line, "Type=INPUT") == 0) {
         return INPUT;
     }
@@ -165,9 +175,8 @@ static DeviceType parseType(const char *line) { //error when not const bc strstr
         return XOR;
     }
 
-    fprintf(stderr, "Invalid device type: %s\n", line);
-    return INVALID; //check in method where this is called
-    
+    fprintf(stderr, "Error: Invalid device type: %s\n", line);
+    exit(1);
 }
 
 //remove new lines and other white space
@@ -198,22 +207,22 @@ Array parseValues(const char *line){
     while (line[i] != '=' && line[i] != '\0') {
         i++;
     }
-    i++;
+    i++; // skip the '='
 
     // parse integers
     while (line[i] != '\0') {
+        // skip non-digit characters
+        if (line[i] < '0' || line[i] > '9') {
+            i++;
+            continue;
+        }
+        
         int value = 0;
-
         while (line[i] >= '0' && line[i] <= '9') {
             value = value * 10 + (line[i] - '0');
             i++;
         }
         addToArray(&arr, value);
-
-        //skip commas
-        if (line[i] == ',') {
-            i++;
-        }
     }
     return arr;
 }
@@ -256,9 +265,9 @@ Circuit parseFile(const char *file){
     Circuit circ = newCircuit();
 
     FILE *f = fopen(file, "r");
-    if(f==NULL || !f){
-        fprintf(stderr, "Problem opening input file.");
-        return circ; //check for NULL when this method is called
+    if(f==NULL){
+        fprintf(stderr, "Error: Cannot open input file\n");
+        exit(1);
     }
 
     char *line=NULL;
@@ -304,13 +313,13 @@ int dfsEval(Circuit c, int id){
             
         case OR:
             result = 0;
-                for (int i = 0; i < d->numIn; i++) {
-                    result = result | dfsEval(c, d->inputs.data[i]);
-                    if(result==1){
-                        break;
-                    }
+            for (int i = 0; i < d->numIn; i++) {
+                result = result | dfsEval(c, d->inputs.data[i]);
+                if(result==1){
+                    break;
                 }
-                break;
+            }
+            break;
 
         case NOT:
             result = !dfsEval(c, d->inputs.data[0]);
@@ -324,8 +333,8 @@ int dfsEval(Circuit c, int id){
             break;
         
         default:
-            fprintf(stderr, "Undefined device type. Parsing error.\n");
-            result =0;
+            fprintf(stderr, "Error: Undefined device type\n");
+            exit(1);
     }
     d->state=result;
     d->done=true;
@@ -351,7 +360,10 @@ void generateRows(Circuit *c, int idx){
         printf("| ");
 
         for(int i=0; i<c->outIDs.size; i++){
-            printf("%d ", dfsEval(*c, c->outIDs.data[i]));
+            printf("%d", dfsEval(*c, c->outIDs.data[i]));
+            if (i < c->outIDs.size - 1) {
+                printf(" ");
+            }
         }
 
         printf("\n");
@@ -380,24 +392,24 @@ void printTable(Circuit c){
     printf("| ");
 
     for(int i=0; i<c.outIDs.size; i++){
-        printf("%d ", c.outIDs.data[i]);
+        printf("%d", c.outIDs.data[i]);
+        if (i < c.outIDs.size - 1) {
+            printf(" ");
+        }
     }
 
     printf("\n");
     generateRows(&c, 0);
 }
 
-int testmain(int argc, char *argv[]){
-    if(argc==2){
-        Circuit circ = parseFile(argv[1]);
-        printTable(circ);
-        freeCircuit(&circ);
-        return 0;
-    }
-    fprintf(stderr, "Invalid number of inputs.");
-    return 1;
-}
-
 int main(int argc, char *argv[]){
-    testmain(argc, argv);
+    if(argc != 2){
+        fprintf(stderr, "Error: Invalid number of arguments\n");
+        return 1;
+    }
+    
+    Circuit circ = parseFile(argv[1]);
+    printTable(circ);
+    freeCircuit(&circ);
+    return 0;
 }
