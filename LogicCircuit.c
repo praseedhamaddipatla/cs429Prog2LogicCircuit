@@ -118,17 +118,26 @@ void addDevice(Circuit *c, Device *d){
         exit(1);
     }
 
-    c->devices = realloc(c->devices, (d->id + 1) * sizeof(Device));
-    if (c->devices == NULL) {
-        fprintf(stderr, "Error: Memory allocation failed\n");
-        exit(1);
+    // If we need to grow the array, initialize new slots
+    if (d->id >= c->numDevices) {
+        int oldSize = c->numDevices;
+        int newSize = d->id + 1;
+        
+        c->devices = realloc(c->devices, newSize * sizeof(Device));
+        if (c->devices == NULL) {
+            fprintf(stderr, "Error: Memory allocation failed\n");
+            exit(1);
+        }
+        
+        // Initialize all new devices in the gap
+        for (int i = oldSize; i < newSize; i++) {
+            c->devices[i] = newDevice();
+        }
+        
+        c->numDevices = newSize;
     }
 
     c->devices[d->id] = *d;
-
-    if (d->id >= c->numDevices) {
-        c->numDevices = d->id + 1;
-    }
 
     if (d->type == INPUT) {
         addToArray(&c->inIDs, d->id);
